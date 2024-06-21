@@ -139,12 +139,35 @@ large_var_map
 # retain the same endpoints for the palette across each of the three zoom-in 
 # maps, even though individual endpoints for each map may vary. Maybe set xlim
 # and ylim through ggplot, rather than cropping rasters?
+# Holy shit it actually works.
+
+# Extents that we want to highlight in the Zoom-in
+disagree_ext <- terra::ext(x = c(998002, 998010, 449965, 449995))
+agree_ext <- terra::ext(x = c(998070, 998085, 449920, 449935))
+
+# Still some work to do - the rectangles don't quite show up where they should,
+# could convert the SpatExtent objects to SpatVectors and use geom_spatvector?
+disagree_list <- list(xmin = 998000, 
+                      xmax = 998010,
+                      ymin = 449965,
+                      ymax = 450000)
+agree_list <- list(xmin = 998070, 
+                   xmax = 998085, 
+                   ymin = 449920, 
+                   ymax = 449935)
+
 small_des_map <- ggplot() +
   geom_spatraster(data = des) +
   scale_fill_gradient(low = "#FFFFFF",
                       high = "#000000") +
   xlim(c(998000, 998100)) +
   ylim(c(449900, 450000)) +
+  # geom_rect(mapping = aes(xmin = disagree_list$xmin,
+  #                         xmax = disagree_list$xmax,
+  #                         ymin = disagree_list$ymin,
+  #                         ymax = disagree_list$ymax),
+  #           color = "#000000",
+  #           fill = NA) +
   theme_bw() +
   theme(axis.text = element_blank())
 small_des_map
