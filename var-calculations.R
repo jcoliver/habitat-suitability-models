@@ -83,12 +83,13 @@ agree_ext <- terra::ext(x = c(998070, 998085, 449920, 449935))
 # par(mfrow = c(1, 1))
 # dev.off()
 
+# Large map, just variance
 pdf(file = "output/large-map.pdf")
 plot(var_ras, main = "Variance", col = rev(heat.colors(n = 50)))
 lines(zoom_ext, lwd = 1, col = "black")
 dev.off()
 
-
+# Four-panel zoom in of three methods and variance
 pdf(file = "output/zoom-map.pdf")
 par(mfrow = c(2, 2))
 plot(des_crop, main = "Designer")
@@ -119,7 +120,7 @@ ggplot() +
 # purple for high variance
 # Pale green #99FFCC
 # Pale violet #FFCCFF
-ggplot() +
+large_var_map <- ggplot() +
   geom_spatraster(data = var_ras) +
   scale_fill_gradient(low = "#e4fff1",
                       high = "#FF33FF") +
@@ -132,4 +133,48 @@ ggplot() +
             fill = NA) +
   theme_bw()
 
+large_var_map
 
+# Need to create three maps, with black and white color scale. Want to still 
+# retain the same endpoints for the palette across each of the three zoom-in 
+# maps, even though individual endpoints for each map may vary. Maybe set xlim
+# and ylim through ggplot, rather than cropping rasters?
+small_des_map <- ggplot() +
+  geom_spatraster(data = des) +
+  scale_fill_gradient(low = "#FFFFFF",
+                      high = "#000000") +
+  xlim(c(998000, 998100)) +
+  ylim(c(449900, 450000)) +
+  theme_bw() +
+  theme(axis.text = element_blank())
+small_des_map
+
+small_field_map <- ggplot() +
+  geom_spatraster(data = field) +
+  scale_fill_gradient(low = "#FFFFFF",
+                      high = "#000000") +
+  xlim(c(998000, 998100)) +
+  ylim(c(449900, 450000)) +
+  theme_bw() +
+  theme(axis.text = element_blank())
+small_field_map
+
+small_res_map <- ggplot() +
+  geom_spatraster(data = res) +
+  scale_fill_gradient(low = "#FFFFFF",
+                      high = "#000000") +
+  xlim(c(998000, 998100)) +
+  ylim(c(449900, 450000)) +
+  theme_bw() +
+  theme(axis.text = element_blank())
+small_res_map
+
+small_var_map <- ggplot() +
+  geom_spatraster(data = var_ras) +
+  scale_fill_gradient(low = "#e4fff1",
+                      high = "#FF33FF") +
+  xlim(c(998000, 998100)) +
+  ylim(c(449900, 450000)) +
+  theme_bw() +
+  theme(axis.text = element_blank())
+small_var_map
