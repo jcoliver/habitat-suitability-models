@@ -15,6 +15,11 @@ library(ggpubr)
 #          and the variance plot. Use grayscale for three method plots (to 
 #          match earlier figures) and same scale as panel A for variance.
 
+# TODO: Need to rename things thusly:
+# des(igner) -> regression
+# res(earch ecologist) -> gis
+# field( ecologist) -> map_layering
+
 # Load in the three rasters
 des <- terra::rast(x = "data/20240320_RasterMaps/DSGNRASTER.tif")
 field <- terra::rast(x = "data/20240320_RasterMaps/Field_20240320.tif")
@@ -118,6 +123,7 @@ ggplot() +
                       high = "#FFFFFF")
 
 # Zoom rectangle. A bit of futzing to get these numbers right. 
+# Prior dimensions
 # zoom_list <- list(xmin = 998005,
 #                   xmax = 998100,
 #                   ymin = 449900,
@@ -147,6 +153,7 @@ large_var_map <- ggplot() +
             fill = NA) +
   theme_bw()
 large_var_map
+ggsave(filename = "output/figure3a.pdf", plot = large_var_map)
 
 # Need to create three maps, with black and white color scale. Want to still 
 # retain the same endpoints for the palette across each of the three zoom-in 
@@ -186,6 +193,7 @@ small_des_map <- ggplot() +
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
+  ggtitle(label = "Map Layering") +
   theme(axis.text = element_blank())
 small_des_map
 
@@ -205,6 +213,7 @@ small_field_map <- ggplot() +
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
+  ggtitle(label = "GIS") +
   theme(axis.text = element_blank())
 small_field_map
 
@@ -224,6 +233,7 @@ small_res_map <- ggplot() +
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
+  ggtitle(label = "Regression") +
   theme(axis.text = element_blank())
 small_res_map
 
@@ -243,11 +253,21 @@ small_var_map <- ggplot() +
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
+  ggtitle(label = "Variance") +
   theme(axis.text = element_blank())
 small_var_map
 
 # Stitch all four small maps together into single image
+
+# ggarrange does a poor job with labels
+# des(igner) -> map_layering
+# res(earch ecologist) -> regression
+# field( ecologist) -> gis
+# labels_list <- list("Map layering", "Regression", "GIS", "Variance")
+
 four_panel <- ggpubr::ggarrange(small_des_map, small_field_map,
                                 small_res_map, small_var_map,
+                                # labels = labels_list,
                                 ncol = 2, nrow = 2)
 four_panel
+ggsave(filename = "output/figure3b.pdf", plot = four_panel)
