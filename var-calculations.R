@@ -6,6 +6,7 @@
 library(terra)
 library(ggplot2)
 library(tidyterra)
+library(ggpubr)
 
 # Code for creating Figure Variance (tentatively figure 3)
 # Panel A: A figure of entire area, showing variance calculated on three 
@@ -116,6 +117,18 @@ ggplot() +
   scale_fill_gradient(low = "#FF0000",
                       high = "#FFFFFF")
 
+# Zoom rectangle. A bit of futzing to get these numbers right. 
+# zoom_list <- list(xmin = 998005,
+#                   xmax = 998100,
+#                   ymin = 449900,
+#                   ymax = 450000)
+# Trying to move zoom a little southward and eastward to get region of high(er)
+# variance
+zoom_list <- list(xmin = 998050,
+                  xmax = 998150,
+                  ymin = 449840,
+                  ymax = 449940)
+
 # For variance plot, try a purple-green gradient, green for low variance, 
 # purple for high variance
 # Pale green #99FFCC
@@ -123,16 +136,16 @@ ggplot() +
 large_var_map <- ggplot() +
   geom_spatraster(data = var_ras) +
   scale_fill_gradient(low = "#e4fff1",
-                      high = "#FF33FF") +
-  geom_rect(mapping = aes(xmin = 998000, 
-                          xmax = 998100,
-                          ymin = 449900,
-                          ymax = 450000),
+                      high = "#FF33FF",
+                      name = "Variance") +
+  geom_rect(mapping = aes(xmin = zoom_list$xmin, 
+                          xmax = zoom_list$xmax,
+                          ymin = zoom_list$ymin,
+                          ymax = zoom_list$ymax),
             lwd = 0.5,
             color = "#000000",
             fill = NA) +
   theme_bw()
-
 large_var_map
 
 # Need to create three maps, with black and white color scale. Want to still 
@@ -142,32 +155,36 @@ large_var_map
 # Holy shit it actually works.
 
 # Extents that we want to highlight in the Zoom-in
-disagree_ext <- terra::ext(x = c(998002, 998010, 449965, 449995))
-agree_ext <- terra::ext(x = c(998070, 998085, 449920, 449935))
+# Note numbers had to be manually adjusted to line up
+#                                 xmin,   xmax,   ymin,   ymax
+# disagree_ext <- terra::ext(x = c(998005, 998015, 449962, 449995))
+disagree_ext <- terra::ext(x = c(998077, 998103, 449850, 449868))
+agree_ext <- terra::ext(x = c(998069, 998087, 449921, 449933))
 
-# Still some work to do - the rectangles don't quite show up where they should,
-# could convert the SpatExtent objects to SpatVectors and use geom_spatvector?
-disagree_list <- list(xmin = 998000, 
-                      xmax = 998010,
-                      ymin = 449965,
-                      ymax = 450000)
-agree_list <- list(xmin = 998070, 
-                   xmax = 998085, 
-                   ymin = 449920, 
-                   ymax = 449935)
+# Create SpatVectors
+disagree_vect <- as.polygons(disagree_ext)
+agree_vect <- as.polygons(agree_ext)
 
+# Update CRS based on var_ras
+crs(disagree_vect) <- crs(var_ras)
+crs(agree_vect) <- crs(var_ras)
+
+# Make four separate plot objects
 small_des_map <- ggplot() +
   geom_spatraster(data = des) +
   scale_fill_gradient(low = "#FFFFFF",
-                      high = "#000000") +
-  xlim(c(998000, 998100)) +
-  ylim(c(449900, 450000)) +
-  # geom_rect(mapping = aes(xmin = disagree_list$xmin,
-  #                         xmax = disagree_list$xmax,
-  #                         ymin = disagree_list$ymin,
-  #                         ymax = disagree_list$ymax),
-  #           color = "#000000",
-  #           fill = NA) +
+                      high = "#000000",
+                      name = "Suitability") +
+  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+  geom_spatvector(data = disagree_vect, 
+                  color = "#FF33FF",
+                  lwd = 1,
+                  fill = NA) +
+  geom_spatvector(data = agree_vect, 
+                  color = "#84ffa1",
+                  lwd = 1,
+                  fill = NA) +
   theme_bw() +
   theme(axis.text = element_blank())
 small_des_map
@@ -175,9 +192,18 @@ small_des_map
 small_field_map <- ggplot() +
   geom_spatraster(data = field) +
   scale_fill_gradient(low = "#FFFFFF",
-                      high = "#000000") +
-  xlim(c(998000, 998100)) +
-  ylim(c(449900, 450000)) +
+                      high = "#000000",
+                      name = "Suitability") +
+  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+  geom_spatvector(data = disagree_vect, 
+                  color = "#FF33FF",
+                  lwd = 1,
+                  fill = NA) +
+  geom_spatvector(data = agree_vect, 
+                  color = "#84ffa1",
+                  lwd = 1,
+                  fill = NA) +
   theme_bw() +
   theme(axis.text = element_blank())
 small_field_map
@@ -185,9 +211,18 @@ small_field_map
 small_res_map <- ggplot() +
   geom_spatraster(data = res) +
   scale_fill_gradient(low = "#FFFFFF",
-                      high = "#000000") +
-  xlim(c(998000, 998100)) +
-  ylim(c(449900, 450000)) +
+                      high = "#000000",
+                      name = "Suitability") +
+  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+  geom_spatvector(data = disagree_vect, 
+                  color = "#FF33FF",
+                  lwd = 1,
+                  fill = NA) +
+  geom_spatvector(data = agree_vect, 
+                  color = "#84ffa1",
+                  lwd = 1,
+                  fill = NA) +
   theme_bw() +
   theme(axis.text = element_blank())
 small_res_map
@@ -195,9 +230,24 @@ small_res_map
 small_var_map <- ggplot() +
   geom_spatraster(data = var_ras) +
   scale_fill_gradient(low = "#e4fff1",
-                      high = "#FF33FF") +
-  xlim(c(998000, 998100)) +
-  ylim(c(449900, 450000)) +
+                      high = "#FF33FF",
+                      name = "Variance") +
+  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+  geom_spatvector(data = disagree_vect, 
+                  color = "#000000",
+                  lwd = 1,
+                  fill = NA) +
+  geom_spatvector(data = agree_vect, 
+                  color = "#000000",
+                  lwd = 1,
+                  fill = NA) +
   theme_bw() +
   theme(axis.text = element_blank())
 small_var_map
+
+# Stitch all four small maps together into single image
+four_panel <- ggpubr::ggarrange(small_des_map, small_field_map,
+                                small_res_map, small_var_map,
+                                ncol = 2, nrow = 2)
+four_panel
