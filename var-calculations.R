@@ -3,14 +3,15 @@
 # jcoliver@arizona.edu
 # 2024-03-20
 
-library(terra)
-library(ggplot2)
-library(tidyterra)
-library(ggpubr)
+library(terra)     # For raster wrangling
+library(ggplot2)   # Nice images
+library(tidyterra) # Plotting terra objects with ggplot
+library(ggpubr)    # Multi-panel figures
 
 # Code for creating Figure Variance (tentatively figure 3)
 # Panel A: A figure of entire area, showing variance calculated on three 
-#          sources. Use red for *low* variance.
+#          sources. Use red for *low* variance. UPDATE: red for low variance
+#          does not work well. Entire map looks red.
 # Panel B: Four-panel figure, of zoomed-in area for each of the three methods
 #          and the variance plot. Use grayscale for three method plots (to 
 #          match earlier figures) and same scale as panel A for variance.
@@ -40,14 +41,6 @@ plot(sd_ras)
 var_ras <- sd_ras * sd_ras
 plot(var_ras)
 
-# Plot the three original rasters and the variance raster
-par(mfrow = c(2, 2))
-plot(des, main = "Designer")
-plot(field, main = "Field Ecologist")
-plot(res, main = "Research Ecologist")
-plot(var_ras, main = "Variance")
-par(mfrow = c(1, 1))
-
 # Zoom in for an example (xmin, xmax, ymin, ymax)
 # Large area, including Old Main, Student Union, and part of mall
 # zoom_ext <- terra::ext(x = c(997500, 998500, 449000, 450000))
@@ -60,18 +53,31 @@ par(mfrow = c(1, 1))
 # Spot a little northwest of student union
 zoom_ext <- terra::ext(x = c(998000, 998100, 449900, 450000))
 
+# Zoom as a SpatExtent
+# zoom_ext <- terra::ext(x = c(998050, 998150, 449840, 449940))
+
+# Extents that we want to highlight in the Zoom-in
+disagree_ext <- terra::ext(x = c(998002, 998010, 449965, 449995))
+agree_ext <- terra::ext(x = c(998070, 998085, 449920, 449935))
+# disagree_ext <- terra::ext(x = c(998077, 998103, 449850, 449868))
+# agree_ext <- terra::ext(x = c(998069, 998087, 449921, 449933))
+
+################################################################################
+# base R plots
+
+# Plot the three original rasters and the variance raster
+par(mfrow = c(2, 2))
+plot(des, main = "Designer")
+plot(field, main = "Field Ecologist")
+plot(res, main = "Research Ecologist")
+plot(var_ras, main = "Variance")
+par(mfrow = c(1, 1))
+
 # Create the zoomed-in rasters
 des_crop <- terra::crop(x = des, y = zoom_ext)
 field_crop <- terra::crop(x = field, y = zoom_ext)
 res_crop <- terra::crop(x = res, y = zoom_ext)
 var_crop <- terra::crop(x = var_ras, y = zoom_ext)
-
-# Extents that we want to highlight in the Zoom-in
-disagree_ext <- terra::ext(x = c(998002, 998010, 449965, 449995))
-agree_ext <- terra::ext(x = c(998070, 998085, 449920, 449935))
-
-################################################################################
-# base R plots
 
 # Plotting the rasters, then zooming in
 # A four-panel figure showing three models and variance, with a black rectangle
@@ -115,25 +121,32 @@ dev.off()
 
 ################################################################################
 # The ggplot way
+
+# Just pull out values from the Zoom-in SpatExtent as a polygon; easier to work 
+# with in ggplot + tidyterra
+zoom_vect <- as.polygons(zoom_ext)
+crs(zoom_vect) <- crs(var_ras)
+
 # Panel A (just variance)
 # A plot that is pretty much all red. Tough to really see...
-ggplot() +
-  geom_spatraster(data = var_ras) +
-  scale_fill_gradient(low = "#FF0000",
-                      high = "#FFFFFF")
+# ggplot() +
+#   geom_spatraster(data = var_ras) +
+#   scale_fill_gradient(low = "#FF0000",
+#                       high = "#FFFFFF")
 
-# Zoom rectangle. A bit of futzing to get these numbers right. 
-# Prior dimensions
-# zoom_list <- list(xmin = 998005,
-#                   xmax = 998100,
-#                   ymin = 449900,
-#                   ymax = 450000)
-# Trying to move zoom a little southward and eastward to get region of high(er)
-# variance
-zoom_list <- list(xmin = 998050,
-                  xmax = 998150,
-                  ymin = 449840,
-                  ymax = 449940)
+# The greens need to be slightly different depending on if it is a fill (for 
+# variance maps) or a line (for suitability maps)
+agree_line <- "#84ffa1"
+agree_fill <- "#e4fff1"
+disagree_color <- "#FF33FF"
+
+# TODO: For small maps (suitability and variance), need to establish endpoints 
+# of palettes. These should be min/max based on larger maps.
+var_limits <- minmax(var_ras)[1:2]
+# Two step process because minmax gives pair of values (min/max) for each 
+# raster
+suit_limits <- minmax(c(des, field, res))
+suit_limits <- c(min(suit_limits[1, ]), max(suit_limits[2, ]))
 
 # For variance plot, try a purple-green gradient, green for low variance, 
 # purple for high variance
@@ -141,16 +154,14 @@ zoom_list <- list(xmin = 998050,
 # Pale violet #FFCCFF
 large_var_map <- ggplot() +
   geom_spatraster(data = var_ras) +
-  scale_fill_gradient(low = "#e4fff1",
-                      high = "#FF33FF",
-                      name = "Variance") +
-  geom_rect(mapping = aes(xmin = zoom_list$xmin, 
-                          xmax = zoom_list$xmax,
-                          ymin = zoom_list$ymin,
-                          ymax = zoom_list$ymax),
-            lwd = 0.5,
-            color = "#000000",
-            fill = NA) +
+  scale_fill_gradient(low = agree_fill,
+                      high = disagree_color,
+                      name = "Variance",
+                      limits = var_limits) +
+  geom_spatvector(data = zoom_vect, 
+                  color = "#000000",
+                  lwd = 0.5,
+                  fill = NA) +
   theme_bw()
 large_var_map
 ggsave(filename = "output/figure3a.pdf", plot = large_var_map)
@@ -159,16 +170,15 @@ ggsave(filename = "output/figure3a.pdf", plot = large_var_map)
 # retain the same endpoints for the palette across each of the three zoom-in 
 # maps, even though individual endpoints for each map may vary. Maybe set xlim
 # and ylim through ggplot, rather than cropping rasters?
-# Holy shit it actually works.
+# Holy shit it actually works. But we lose a bunch of resolution...
 
-# Extents that we want to highlight in the Zoom-in
-# Note numbers had to be manually adjusted to line up
-#                                 xmin,   xmax,   ymin,   ymax
-# disagree_ext <- terra::ext(x = c(998005, 998015, 449962, 449995))
-disagree_ext <- terra::ext(x = c(998077, 998103, 449850, 449868))
-agree_ext <- terra::ext(x = c(998069, 998087, 449921, 449933))
+# When we do the cropping, the resolution is maintained, but we *do* lose the 
+# link across all three of the suitability map scales (one of the maps, 
+# regression, only ranges from 4-5 in zoomed-in version). UPDATE: can set 
+# endpoint values for cells with the limits argument of scale_fill_gradient().
 
-# Create SpatVectors
+# Create SpatVectors for those rectangles of interest, easier to plot in 
+# ggplot+tidyterra with geom_spatvector
 disagree_vect <- as.polygons(disagree_ext)
 agree_vect <- as.polygons(agree_ext)
 
@@ -178,18 +188,19 @@ crs(agree_vect) <- crs(var_ras)
 
 # Make four separate plot objects
 small_des_map <- ggplot() +
-  geom_spatraster(data = des) +
+  geom_spatraster(data = terra::crop(x = des, y = zoom_ext)) +
   scale_fill_gradient(low = "#FFFFFF",
                       high = "#000000",
-                      name = "Suitability") +
-  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
-  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+                      name = "Suitability",
+                      limits = suit_limits) +
+  # xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  # ylim(c(zoom_list$ymin, zoom_list$ymax)) +
   geom_spatvector(data = disagree_vect, 
-                  color = "#FF33FF",
+                  color = disagree_color,
                   lwd = 1,
                   fill = NA) +
   geom_spatvector(data = agree_vect, 
-                  color = "#84ffa1",
+                  color = agree_line,
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
@@ -198,18 +209,19 @@ small_des_map <- ggplot() +
 small_des_map
 
 small_field_map <- ggplot() +
-  geom_spatraster(data = field) +
+  geom_spatraster(data = terra::crop(x = field, y = zoom_ext)) +
   scale_fill_gradient(low = "#FFFFFF",
                       high = "#000000",
-                      name = "Suitability") +
-  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
-  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+                      name = "Suitability",
+                      limits = suit_limits) +
+  # xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  # ylim(c(zoom_list$ymin, zoom_list$ymax)) +
   geom_spatvector(data = disagree_vect, 
-                  color = "#FF33FF",
+                  color = disagree_color,
                   lwd = 1,
                   fill = NA) +
   geom_spatvector(data = agree_vect, 
-                  color = "#84ffa1",
+                  color = agree_line,
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
@@ -218,18 +230,19 @@ small_field_map <- ggplot() +
 small_field_map
 
 small_res_map <- ggplot() +
-  geom_spatraster(data = res) +
+  geom_spatraster(data = terra::crop(x = res, y = zoom_ext)) +
   scale_fill_gradient(low = "#FFFFFF",
                       high = "#000000",
-                      name = "Suitability") +
-  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
-  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+                      name = "Suitability",
+                      limits = suit_limits) +
+  # xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  # ylim(c(zoom_list$ymin, zoom_list$ymax)) +
   geom_spatvector(data = disagree_vect, 
-                  color = "#FF33FF",
+                  color = disagree_color,
                   lwd = 1,
                   fill = NA) +
   geom_spatvector(data = agree_vect, 
-                  color = "#84ffa1",
+                  color = agree_line,
                   lwd = 1,
                   fill = NA) +
   theme_bw() +
@@ -238,12 +251,13 @@ small_res_map <- ggplot() +
 small_res_map
 
 small_var_map <- ggplot() +
-  geom_spatraster(data = var_ras) +
-  scale_fill_gradient(low = "#e4fff1",
-                      high = "#FF33FF",
-                      name = "Variance") +
-  xlim(c(zoom_list$xmin, zoom_list$xmax)) +
-  ylim(c(zoom_list$ymin, zoom_list$ymax)) +
+  geom_spatraster(data = terra::crop(x = var_ras, y = zoom_ext)) +
+  scale_fill_gradient(low = agree_fill,
+                      high = disagree_color,
+                      name = "Variance",
+                      limits = var_limits) +
+  # xlim(c(zoom_list$xmin, zoom_list$xmax)) +
+  # ylim(c(zoom_list$ymin, zoom_list$ymax)) +
   geom_spatvector(data = disagree_vect, 
                   color = "#000000",
                   lwd = 1,
@@ -271,3 +285,11 @@ four_panel <- ggpubr::ggarrange(small_des_map, small_field_map,
                                 ncol = 2, nrow = 2)
 four_panel
 ggsave(filename = "output/figure3b.pdf", plot = four_panel)
+
+# Try putting A (variance of entire area) and B (four-panel plot of the three 
+# methods and variance zoomed in) into a single image
+# No. This is hideous. Need to do it manually
+# fig_ab <- ggpubr::ggarrange(large_var_map, four_panel,
+#                             labels = c("A", "B"),
+#                             ncol = 2, nrow = 1)
+# fig_ab
