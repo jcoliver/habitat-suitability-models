@@ -140,12 +140,12 @@ agree_line <- "#84ffa1"
 agree_fill <- "#e4fff1"
 disagree_color <- "#FF33FF"
 
-# TODO: For small maps (suitability and variance), need to establish endpoints 
+# For small maps (suitability and variance), need to establish endpoints 
 # of palettes. These should be min/max based on larger maps.
 var_limits <- minmax(var_ras)[1:2]
-# Two step process because minmax gives pair of values (min/max) for each 
-# raster
-suit_limits <- minmax(c(des, field, res))
+# Two step process because terra::minmax gives pair of values (min/max) for 
+# each raster
+suit_limits <- terra::minmax(c(des, field, res))
 suit_limits <- c(min(suit_limits[1, ]), max(suit_limits[2, ]))
 
 # For variance plot, try a purple-green gradient, green for low variance, 
@@ -165,6 +165,7 @@ large_var_map <- ggplot() +
   theme_bw()
 large_var_map
 ggsave(filename = "output/figure3a.pdf", plot = large_var_map)
+ggsave(filename = "output/figure3a.png", plot = large_var_map)
 
 # Need to create three maps, with black and white color scale. Want to still 
 # retain the same endpoints for the palette across each of the three zoom-in 
@@ -285,6 +286,7 @@ four_panel <- ggpubr::ggarrange(small_des_map, small_field_map,
                                 ncol = 2, nrow = 2)
 four_panel
 ggsave(filename = "output/figure3b.pdf", plot = four_panel)
+ggsave(filename = "output/figure3b.png", plot = four_panel)
 
 # Try putting A (variance of entire area) and B (four-panel plot of the three 
 # methods and variance zoomed in) into a single image
